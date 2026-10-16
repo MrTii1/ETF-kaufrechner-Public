@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#17322d">
+  <title>ETF-Kaufrechner</title>
+  <style>
+    :root {
+      --ink: #17322d;
+      --muted: #5f716c;
+      --paper: #f2f0e9;
+      --card: #fffdf8;
+      --line: #d7ddd7;
+      --green: #176b57;
+      --green-dark: #0f5545;
+      --green-soft: #dcefe8;
+      --gold: #b97916;
+      --red: #a33f37;
+      --red-soft: #fae9e6;
+      --shadow: 0 18px 48px rgba(23, 50, 45, .10);
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    header {
+      background: var(--ink);
+      color: #fff;
+      padding: max(32px, env(safe-area-inset-top)) 20px 72px;
+    }
+    header > div, main { width: min(100%, 960px); margin-inline: auto; }
+    h1 { margin: 0 0 10px; font-size: clamp(30px, 6vw, 48px); line-height: 1.04; letter-spacing: -.04em; }
+    header p { max-width: 650px; margin: 0; color: #c9d8d4; }
+    .eyebrow { margin-bottom: 8px; color: #9dd6c5; font-size: 12px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    main { margin-top: -40px; padding: 0 20px max(40px, env(safe-area-inset-bottom)); }
+    .stack { display: grid; gap: 18px; }
+    .card { padding: 22px; border: 1px solid rgba(23, 50, 45, .10); border-radius: 18px; background: var(--card); box-shadow: var(--shadow); }
+    h2 { margin: 0 0 6px; font-size: 20px; }
+    .intro, .hint { color: var(--muted); }
+    .intro { margin: 0 0 18px; }
+    .hint { margin: 8px 0 0; font-size: 13px; }
+    label { display: block; margin-bottom: 6px; font-weight: 750; }
+    .input-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+    .field-wrap { position: relative; }
+    .field-wrap input { padding-right: 58px; }
+    .unit { position: absolute; top: 50%; right: 13px; translate: 0 -50%; color: var(--muted); pointer-events: none; }
+    input {
+      width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+      background: #fff; color: var(--ink); font: inherit; font-variant-numeric: tabular-nums;
+    }
+    input:focus { outline: 3px solid var(--green-soft); border-color: var(--green); }
+    input[aria-invalid="true"] { border-color: var(--red); background: #fff9f8; }
+    button {
+      min-height: 46px; padding: 10px 18px; border: 0; border-radius: 10px; background: var(--green);
+      color: #fff; font: 750 15px/1.2 inherit; cursor: pointer; touch-action: manipulation;
+    }
+    button:hover { background: var(--green-dark); }
+    button:focus-visible { outline: 3px solid #7fc5b0; outline-offset: 2px; }
+    .message { display: none; margin-top: 12px; padding: 11px 13px; border-radius: 10px; }
+    .message.show { display: block; }
+    .message.error { background: var(--red-soft); color: #732c26; }
+    .message.info { background: var(--green-soft); color: var(--ink); }
+    .fund-grid { display: grid; grid-template-columns: minmax(220px, 1fr) 140px 180px; gap: 10px 14px; align-items: end; }
+    .grid-head { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+    .fund { align-self: center; min-width: 0; }
+    .fund strong { display: block; }
+    .fund small { display: block; overflow-wrap: anywhere; color: var(--muted); }
+    .sum-row { display: flex; justify-content: flex-end; gap: 18px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); font-weight: 800; }
+    .sum-row.invalid { color: var(--red); }
+    .results { margin-top: 20px; }
+    .results[hidden] { display: none; }
+    .result-list { margin-top: 12px; border-top: 1px solid var(--line); }
+    .result-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 14px 0; border-bottom: 1px solid #e8eae6; }
+    .result-row output { color: var(--green-dark); font-size: 19px; font-weight: 850; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .result-total { display: flex; justify-content: space-between; gap: 18px; padding-top: 14px; font-size: 17px; font-weight: 850; }
+    .explanation { margin: 14px 0 0; padding: 12px 14px; border-left: 4px solid var(--gold); border-radius: 4px 10px 10px 4px; background: #fbf3e4; color: #5f471f; }
+    footer { margin-top: 20px; color: var(--muted); font-size: 12px; text-align: center; }
+    .storage-warning { margin-bottom: 18px; }
+    @media (max-width: 700px) {
+      main { padding-inline: 12px; }
+      .card { padding: 17px; border-radius: 15px; }
+      .fund-grid { grid-template-columns: 1fr 1fr; gap: 12px 10px; }
+      .grid-head { display: none; }
+      .fund { grid-column: 1 / -1; margin-top: 5px; }
+      .fund:first-of-type { margin-top: 0; }
+      .field-label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    }
+    @media (max-width: 430px) {
+      .input-action { grid-template-columns: 1fr; }
+      .input-action button { width: 100%; }
+      .result-row { gap: 10px; }
+      .result-row output { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="eyebrow">Private Depotplanung</div>
+      <h1>ETF-Kaufrechner</h1>
+      <p>Neue Einzahlungen so verteilen, dass die bisherigen Einstandsbeträge wieder näher an die gewünschte Zielgewichtung rücken.</p>
+    </div>
+  </header>
+
+  <main>
+    <div id="storageWarning" class="message error storage-warning" role="alert"></div>
+    <div class="stack">
+      <section class="card" aria-labelledby="plan-heading">
+        <h2 id="plan-heading">Neue Einzahlung planen</h2>
+        <p class="intro">Gib den verfügbaren Betrag ein. Die Empfehlung berücksichtigt die unten eingetragenen bisherigen Einstandsbeträge.</p>
+        <label for="investment">Investitionsbetrag</label>
+        <div class="input-action">
+          <div class="field-wrap">
+            <input id="investment" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 500,00" aria-describedby="investmentHint formMessage">
+            <span class="unit">EUR</span>
+          </div>
+          <button id="calculate" type="button">Kauf berechnen</button>
+        </div>
+        <p id="investmentHint" class="hint">Positiver Betrag mit höchstens zwei Nachkommastellen.</p>
+        <div id="formMessage" class="message error" role="alert" aria-live="assertive"></div>
+
+        <div id="results" class="results" hidden aria-live="polite">
+          <h2>Kaufempfehlung</h2>
+          <div id="resultList" class="result-list"></div>
+          <div class="result-total"><span>Gesamtsumme</span><output id="resultTotal"></output></div>
+          <p class="explanation">Untergewichtete ETFs werden bevorzugt. Reicht die Einzahlung nicht zum vollständigen Ausgleich, wird sie proportional zu den bestehenden Untergewichtungen verteilt. Rest-Cent werden nach dem größten mathematischen Rundungsrest, bei Gleichstand in der angezeigten ETF-Reihenfolge, vergeben.</p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="strategy-heading">
+        <h2 id="strategy-heading">Strategie und bisherige Einstandsbeträge</h2>
+        <p class="intro">Die Zielgewichte müssen zusammen exakt 100,00 % ergeben. Einstand bedeutet hier die Summe der bisher investierten Kaufbeträge, nicht den aktuellen Marktwert.</p>
+        <div class="fund-grid">
+          <div class="grid-head">ETF</div><div class="grid-head">Zielgewicht</div><div class="grid-head">Bisheriger Einstand</div>
+
+          <div class="fund"><strong>Vanguard FTSE Global All-Cap Acc</strong><small>IE000VAHT5T0</small></div>
+          <div><label class="field-label" for="weight-global">Zielgewicht</label><div class="field-wrap"><input id="weight-global" data-weight="0" type="text" inputmode="decimal" autocomplete="off"><span class="unit">%</span></div></div>
+          <div><label class="field-label" for="holding-global">Bisheriger Einstand</label><div class="field-wrap"><input id="holding-global" data-holding="0" type="text" inputmode="decimal" autocomplete="off"><span class="unit">EUR</span></div></div>
+
+          <div class="fund"><strong>L&amp;G Gerd Kommer Multifactor Acc</strong><small>IE0001UQQ933</small></div>
+          <div><label class="field-label" for="weight-kommer">Zielgewicht</label><div class="field-wrap"><input id="weight-kommer" data-weight="1" type="text" inputmode="decimal" autocomplete="off"><span class="unit">%</span></div></div>
+          <div><label class="field-label" for="holding-kommer">Bisheriger Einstand</label><div class="field-wrap"><input id="holding-kommer" data-holding="1" type="text" inputmode="decimal" autocomplete="off"><span class="unit">EUR</span></div></div>
+
+          <div class="fund"><strong>Vanguard FTSE All-World High Dividend Dist</strong><small>IE00B8GKDB10</small></div>
+          <div><label class="field-label" for="weight-highdiv">Zielgewicht</label><div class="field-wrap"><input id="weight-highdiv" data-weight="2" type="text" inputmode="decimal" autocomplete="off"><span class="unit">%</span></div></div>
+          <div><label class="field-label" for="holding-highdiv">Bisheriger Einstand</label><div class="field-wrap"><input id="holding-highdiv" data-holding="2" type="text" inputmode="decimal" autocomplete="off"><span class="unit">EUR</span></div></div>
+
+          <div class="fund"><strong>VanEck Developed Markets Dividend Leaders</strong><small>NL0011683594</small></div>
+          <div><label class="field-label" for="weight-vaneck">Zielgewicht</label><div class="field-wrap"><input id="weight-vaneck" data-weight="3" type="text" inputmode="decimal" autocomplete="off"><span class="unit">%</span></div></div>
+          <div><label class="field-label" for="holding-vaneck">Bisheriger Einstand</label><div class="field-wrap"><input id="holding-vaneck" data-holding="3" type="text" inputmode="decimal" autocomplete="off"><span class="unit">EUR</span></div></div>
+        </div>
+        <div id="weightSum" class="sum-row"><span>Summe Zielgewichte</span><output>100,00 %</output></div>
+        <div id="settingsMessage" class="message error" role="alert" aria-live="assertive"></div>
+        <p class="hint">Gültige Eingaben werden automatisch nur in diesem Browser auf diesem Gerät gespeichert.</p>
+      </section>
+    </div>
+    <footer>Planungshilfe ohne Broker- oder Kursdaten · Keine Anlageberatung · Keine Datenübertragung</footer>
+  </main>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const FUNDS = [
+      { id: 'global', name: 'Vanguard FTSE Global All-Cap Acc' },
+      { id: 'kommer', name: 'L&G Gerd Kommer Multifactor Acc' },
+      { id: 'highdiv', name: 'Vanguard FTSE All-World High Dividend Dist' },
+      { id: 'vaneck', name: 'VanEck Developed Markets Dividend Leaders' }
+    ];
+    const DEFAULT_WEIGHTS = [5000, 2000, 2500, 500];
+    const STORAGE_KEY = 'etf-kaufrechner-einfach-v1';
+    const MAX_CENTS = 100000000000;
+    const $ = id => document.getElementById(id);
+    const weightInputs = [...document.querySelectorAll('[data-weight]')];
+    const holdingInputs = [...document.querySelectorAll('[data-holding]')];
+    const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+
+    let storageEnabled = true;
+    let state = loadState();
+
+    function parseFixed(value, decimals, { positive = false, max = Number.MAX_SAFE_INTEGER } = {}) {
+      const normalized = String(value).trim().replace(',', '.');
+      const pattern = decimals === 2 ? /^\d+(?:\.\d{1,2})?$/ : /^\d+$/;
+      if (!pattern.test(normalized)) return null;
+      const [whole, fraction = ''] = normalized.split('.');
+      const scaled = Number(whole) * (10 ** decimals) + Number(fraction.padEnd(decimals, '0'));
+      if (!Number.isSafeInteger(scaled) || scaled > max || (positive && scaled <= 0)) return null;
+      return scaled;
+    }
+
+    function formatFixed(value, decimals = 2) {
+      const factor = 10 ** decimals;
+      return `${Math.floor(value / factor)},${String(value % factor).padStart(decimals, '0')}`;
+    }
+
+    function validState(candidate) {
+      return candidate && candidate.version === 1 &&
+        Array.isArray(candidate.weightsBps) && candidate.weightsBps.length === FUNDS.length &&
+        candidate.weightsBps.every(Number.isSafeInteger) && candidate.weightsBps.every(value => value >= 0 && value <= 10000) &&
+        candidate.weightsBps.reduce((sum, value) => sum + value, 0) === 10000 &&
+        Array.isArray(candidate.holdingsCents) && candidate.holdingsCents.length === FUNDS.length &&
+        candidate.holdingsCents.every(Number.isSafeInteger) && candidate.holdingsCents.every(value => value >= 0 && value <= MAX_CENTS) &&
+        Number.isSafeInteger(candidate.investmentCents) && candidate.investmentCents >= 0 && candidate.investmentCents <= MAX_CENTS;
+    }
+
+    function defaultState() {
+      return { version: 1, weightsBps: [...DEFAULT_WEIGHTS], holdingsCents: [0, 0, 0, 0], investmentCents: 0 };
+    }
+
+    function showStorageWarning(text) {
+      const warning = $('storageWarning');
+      warning.textContent = text;
+      warning.classList.add('show');
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        const parsed = JSON.parse(raw);
+        if (validState(parsed)) return parsed;
+        showStorageWarning('Gespeicherte Werte waren ungültig und wurden nicht übernommen. Es gelten die Standardwerte.');
+        return defaultState();
+      } catch (error) {
+        storageEnabled = false;
+        showStorageWarning('Der lokale Speicher ist nicht verfügbar. Der Rechner funktioniert, kann Eingaben aber auf diesem Gerät nicht behalten.');
+        return defaultState();
+      }
+    }
+
+    function persistState(nextState) {
+      state = nextState;
+      if (!storageEnabled) return;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (error) {
+        storageEnabled = false;
+        showStorageWarning('Die Eingaben konnten nicht lokal gespeichert werden. Sie bleiben nur bis zum Schließen dieser Seite erhalten.');
+      }
+    }
+
+    function distributeByShares(totalCents, shares) {
+      const shareSum = shares.reduce((sum, value) => sum + value, 0);
+      if (shareSum <= 0) return shares.map(() => 0);
+      const denominator = BigInt(shareSum);
+      const total = BigInt(totalCents);
+      const rows = shares.map((share, index) => {
+        const product = total * BigInt(share);
+        return { index, cents: Number(product / denominator), remainder: product % denominator };
+      });
+      let left = totalCents - rows.reduce((sum, row) => sum + row.cents, 0);
+      [...rows].sort((a, b) => {
+        if (a.remainder === b.remainder) return a.index - b.index;
+        return a.remainder > b.remainder ? -1 : 1;
+      }).forEach(row => {
+        if (left > 0) { rows[row.index].cents += 1; left -= 1; }
+      });
+      return rows.map(row => row.cents);
+    }
+
+    function allocate(investmentCents, holdingsCents, weightsBps) {
+      if (!Number.isSafeInteger(investmentCents) || investmentCents <= 0) return weightsBps.map(() => 0);
+      const currentTotal = holdingsCents.reduce((sum, value) => sum + value, 0);
+      const finalTotal = currentTotal + investmentCents;
+      const deficits = weightsBps.map((weight, index) => {
+        const targetNumerator = BigInt(finalTotal) * BigInt(weight);
+        const holdingNumerator = BigInt(holdingsCents[index]) * 10000n;
+        const difference = targetNumerator - holdingNumerator;
+        return difference > 0n ? difference : 0n;
+      });
+      const deficitSum = deficits.reduce((sum, value) => sum + value, 0n);
+      const shares = deficitSum > 0n ? deficits : weightsBps.map(BigInt);
+      const denominator = shares.reduce((sum, value) => sum + value, 0n);
+      const total = BigInt(investmentCents);
+      const rows = shares.map((share, index) => {
+        const product = total * share;
+        return { index, cents: Number(product / denominator), remainder: product % denominator };
+      });
+      let left = investmentCents - rows.reduce((sum, row) => sum + row.cents, 0);
+      [...rows].sort((a, b) => {
+        if (a.remainder === b.remainder) return a.index - b.index;
+        return a.remainder > b.remainder ? -1 : 1;
+      }).forEach(row => {
+        if (left > 0) { rows[row.index].cents += 1; left -= 1; }
+      });
+      return rows.map(row => row.cents);
+    }
+
+    function hideResults() {
+      $('results').hidden = true;
+      $('resultList').replaceChildren();
+      $('resultTotal').textContent = '';
+    }
+
+    function setMessage(element, text) {
+      element.textContent = text;
+      element.classList.toggle('show', Boolean(text));
+    }
+
+    function validateVisibleInputs({ announce = false } = {}) {
+      const investmentCents = parseFixed($('investment').value, 2, { positive: true, max: MAX_CENTS });
+      const weightsBps = weightInputs.map(input => parseFixed(input.value, 2, { max: 10000 }));
+      const holdingsCents = holdingInputs.map(input => parseFixed(input.value, 2, { max: MAX_CENTS }));
+      const weightSum = weightsBps.every(value => value !== null) ? weightsBps.reduce((sum, value) => sum + value, 0) : null;
+
+      $('investment').setAttribute('aria-invalid', String(investmentCents === null));
+      weightInputs.forEach((input, index) => input.setAttribute('aria-invalid', String(weightsBps[index] === null)));
+      holdingInputs.forEach((input, index) => input.setAttribute('aria-invalid', String(holdingsCents[index] === null)));
+      $('weightSum').querySelector('output').textContent = weightSum === null ? '–' : `${formatFixed(weightSum)} %`;
+      $('weightSum').classList.toggle('invalid', weightSum !== 10000);
+
+      let settingsError = '';
+      if (weightsBps.some(value => value === null)) settingsError = 'Jedes Zielgewicht muss zwischen 0,00 % und 100,00 % liegen und darf höchstens zwei Nachkommastellen haben.';
+      else if (weightSum !== 10000) settingsError = `Die Zielgewichte ergeben ${formatFixed(weightSum)} % statt exakt 100,00 %.`;
+      else if (holdingsCents.some(value => value === null)) settingsError = 'Jeder bisherige Einstand muss 0,00 EUR oder größer sein und darf höchstens zwei Nachkommastellen haben.';
+      setMessage($('settingsMessage'), settingsError);
+
+      if (announce) {
+        setMessage($('formMessage'), investmentCents === null ? 'Bitte gib einen positiven Investitionsbetrag mit höchstens zwei Nachkommastellen ein.' : settingsError);
+      } else {
+        setMessage($('formMessage'), '');
+      }
+
+      if (investmentCents === null || settingsError) return null;
+      return { investmentCents, weightsBps, holdingsCents };
+    }
+
+    function saveIfValid() {
+      const investmentCents = parseFixed($('investment').value, 2, { max: MAX_CENTS });
+      const weightsBps = weightInputs.map(input => parseFixed(input.value, 2, { max: 10000 }));
+      const holdingsCents = holdingInputs.map(input => parseFixed(input.value, 2, { max: MAX_CENTS }));
+      if (investmentCents === null || weightsBps.some(value => value === null) || holdingsCents.some(value => value === null)) return;
+      if (weightsBps.reduce((sum, value) => sum + value, 0) !== 10000) return;
+      persistState({ version: 1, investmentCents, weightsBps, holdingsCents });
+    }
+
+    function onInputChanged() {
+      hideResults();
+      validateVisibleInputs();
+      saveIfValid();
+    }
+
+    function calculate() {
+      hideResults();
+      const values = validateVisibleInputs({ announce: true });
+      if (!values) return;
+      persistState({ version: 1, ...values });
+      const allocation = allocate(values.investmentCents, values.holdingsCents, values.weightsBps);
+      const fragment = document.createDocumentFragment();
+      allocation.forEach((cents, index) => {
+        const row = document.createElement('div');
+        row.className = 'result-row';
+        const fund = document.createElement('div');
+        fund.className = 'fund';
+        const name = document.createElement('strong');
+        name.textContent = FUNDS[index].name;
+        const target = document.createElement('small');
+        target.textContent = `Ziel: ${formatFixed(values.weightsBps[index])} %`;
+        fund.append(name, target);
+        const output = document.createElement('output');
+        output.textContent = euro.format(cents / 100);
+        row.append(fund, output);
+        fragment.append(row);
+      });
+      $('resultList').append(fragment);
+      $('resultTotal').textContent = euro.format(allocation.reduce((sum, value) => sum + value, 0) / 100);
+      $('results').hidden = false;
+    }
+
+    function populate() {
+      $('investment').value = state.investmentCents ? formatFixed(state.investmentCents) : '';
+      weightInputs.forEach((input, index) => { input.value = formatFixed(state.weightsBps[index]); });
+      holdingInputs.forEach((input, index) => { input.value = formatFixed(state.holdingsCents[index]); });
+      validateVisibleInputs();
+    }
+
+    $('calculate').addEventListener('click', calculate);
+    $('investment').addEventListener('keydown', event => { if (event.key === 'Enter') calculate(); });
+    [$('investment'), ...weightInputs, ...holdingInputs].forEach(input => input.addEventListener('input', onInputChanged));
+    window.ETFCalculatorTest = { parseFixed, formatFixed, distributeByShares, allocate, validState, DEFAULT_WEIGHTS, MAX_CENTS };
+    populate();
+  })();
+  </script>
+</body>
+</html>
